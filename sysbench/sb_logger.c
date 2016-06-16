@@ -307,7 +307,7 @@ void log_timestamp(log_msg_priority_t priority, const sb_timer_t *timer,
   maxlen = TEXT_BUFFER_SIZE;
   clen = 0;
 
-  n = snprintf(buf, maxlen, "[%4.0fs] ", NS2SEC(timer->elapsed));
+  n = snprintf(buf, maxlen, "[%4.0fs] timestamp: %ld, ", NS2SEC(timer->elapsed), time(NULL));
   clen += n;
   maxlen -= n;
 
