@@ -9,4 +9,4 @@ RUN ./autogen.sh \
 &&  make         \
 &&  make install
 RUN sysbench --test=fileio --file-total-size=1G prepare
-CMD sysbench --test=fileio --file-total-size=1G --file-test-mode=rndrw --init-rng=on --max-time=60 --report-interval=1 --max-requests=0 run
+CMD sysbench --test=fileio --file-total-size=1G --file-test-mode=rndrw --init-rng=on --max-time=0 --report-interval=1 --max-requests=0 run
