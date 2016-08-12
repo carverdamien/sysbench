@@ -936,8 +936,8 @@ static int run_test(sb_test_t *test)
   if (sb_globals.max_time == 0)
   {
     int fd = 0;
-    int flags = fcntl(fd, F_GETFL, 0);
-    fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+    //int flags = fcntl(fd, F_GETFL, 0);
+    //fcntl(fd, F_SETFL, flags | O_NONBLOCK);
     do {
       char c;
       int ret;
