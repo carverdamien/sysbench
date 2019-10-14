@@ -156,6 +156,9 @@ static int report_thread_created CK_CC_CACHELINE;
 static int checkpoints_thread_created;
 static int eventgen_thread_created;
 
+/* per-thread fd to "/sys/kernel/debug/sched_monitor/tracer/user_event" */
+static int *user_event_fds;
+
 /* per-thread timers for response time stats */
 static sb_timer_t *timers;
 
@@ -748,7 +751,9 @@ bool sb_more_events(int thread_id)
 
 void sb_event_start(int thread_id)
 {
-  sb_timer_start(&timers[thread_id]);
+	unsigned long long val = sb_counter_val(thread_id, SB_CNT_EVENT);
+	write(user_event_fds[thread_id], &val, sizeof(val));
+	sb_timer_start(&timers[thread_id]);
 }
 
 
@@ -756,8 +761,12 @@ void sb_event_stop(int thread_id)
 {
   sb_timer_t     *timer = &timers[thread_id];
   long long      value;
+  unsigned long long val;
 
   value = sb_timer_stop(timer);
+
+  val = sb_counter_val(thread_id, SB_CNT_EVENT);
+  write(user_event_fds[thread_id], &val, sizeof(val));
 
   if (sb_globals.percentile > 0)
     sb_histogram_update(&sb_latency_histogram, NS2MS(value));
@@ -1432,17 +1441,20 @@ static int init(void)
   }
 
   /* Initialize timers */
+  user_event_fds = sb_alloc_per_thread_array(sizeof(int));
   timers = sb_alloc_per_thread_array(sizeof(sb_timer_t));
   timers_copy = sb_alloc_per_thread_array(sizeof(sb_timer_t));
 
-  if (timers == NULL || timers_copy == NULL)
+  if (user_event_fds == NULL || timers == NULL || timers_copy == NULL)
   {
     log_text(LOG_FATAL, "Memory allocation failure");
     return 1;
   }
 
-  for (unsigned i = 0; i < sb_globals.threads; i++)
+  for (unsigned i = 0; i < sb_globals.threads; i++) {
     sb_timer_init(&timers[i]);
+    user_event_fds[i] = open("/sys/kernel/debug/sched_monitor/tracer/user_event", O_WRONLY); // TODO check error
+  }
 
   /* LuaJIT commands */
   sb_globals.luajit_cmd = sb_get_value_string("luajit-cmd");
@@ -1614,6 +1626,11 @@ end:
 
   sb_thread_done();
 
+  for (unsigned i = 0; i < sb_globals.threads; i++) {
+	  close(user_event_fds[i]);
+  }
+  
+  free(user_event_fds);
   free(timers);
   free(timers_copy);
 
